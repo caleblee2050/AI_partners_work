@@ -14,6 +14,25 @@ interface InvoiceItem {
   qty: number;
 }
 
+// html2canvas 호환성을 위한 표준 HEX 컬러 정의
+const COLORS = {
+  slate900: '#0f172a',
+  slate700: '#334155',
+  slate600: '#475569',
+  slate500: '#64748b',
+  slate400: '#94a3b8',
+  slate300: '#cbd5e1',
+  slate200: '#e2e8f0',
+  slate100: '#f1f5f9',
+  slate50: '#f8fafc',
+  blue600: '#2563eb',
+  blue500: '#3b82f6',
+  blue100: '#dbeafe',
+  blue50: '#eff6ff',
+  red500: '#ef4444',
+  white: '#ffffff',
+};
+
 export default function InvoiceEditor() {
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [docDate, setDocDate] = useState(new Date().toISOString().split('T')[0]);
@@ -21,7 +40,6 @@ export default function InvoiceEditor() {
   const [projectTitle, setProjectTitle] = useState('');
   const [stampImage, setStampImage] = useState<string | null>(null);
 
-  // 할인 관련 상태
   const [discountName, setDiscountName] = useState('');
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [isPercentDiscount, setIsPercentDiscount] = useState(false);
@@ -29,7 +47,6 @@ export default function InvoiceEditor() {
   const [isLoaded, setIsLoaded] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
 
-  // 로컬 스토리지에서 데이터 로드
   useEffect(() => {
     const savedData = localStorage.getItem('invoice_draft');
     if (savedData) {
@@ -47,7 +64,6 @@ export default function InvoiceEditor() {
         console.error('Failed to load draft:', e);
       }
     } else {
-      // 초기 행 5개 추가
       const initialItems = Array.from({ length: 5 }, (_, i) => ({
         id: i + 1,
         name: '',
@@ -60,7 +76,6 @@ export default function InvoiceEditor() {
     setIsLoaded(true);
   }, []);
 
-  // 데이터 변경 시 로컬 스토리지에 저장
   useEffect(() => {
     if (!isLoaded) return;
     const dataToSave = {
@@ -99,17 +114,12 @@ export default function InvoiceEditor() {
 
   const subtotal = items.reduce((acc, item) => acc + item.price * item.qty, 0);
 
-  // 할인액 계산 (부가세 포함 전 공급가액 기준)
   const calculatedDiscount = isPercentDiscount
     ? Math.floor(subtotal * (discountAmount / 100))
     : discountAmount;
 
-  // 할인이 적용된 실제 공급가액
   const discountedSubtotal = subtotal - calculatedDiscount;
-
-  // 부가세 계산 (할인이 적용된 금액의 10%)
   const vat = Math.floor(discountedSubtotal * 0.1);
-
   const total = discountedSubtotal + vat;
 
   const downloadPDF = async () => {
@@ -122,9 +132,9 @@ export default function InvoiceEditor() {
       const canvas = await html2canvas(invoiceRef.current, {
         scale: 3,
         useCORS: true,
-        logging: false,
+        logging: true,
         allowTaint: true,
-        backgroundColor: '#ffffff',
+        backgroundColor: COLORS.white,
       });
 
       const imgData = canvas.toDataURL('image/png', 1.0);
@@ -154,16 +164,8 @@ export default function InvoiceEditor() {
   const saveToDB = async () => {
     try {
       const dbData = {
-        clientName,
-        docDate,
-        projectTitle,
-        items,
-        subtotal,
-        vat,
-        discountName,
-        discountAmount,
-        isPercentDiscount,
-        total,
+        clientName, docDate, projectTitle, items, subtotal, vat,
+        discountName, discountAmount, isPercentDiscount, total,
       };
 
       const response = await fetch('/api/invoices', {
@@ -229,24 +231,28 @@ export default function InvoiceEditor() {
           </div>
         </div>
 
-        {/* 견적서 시트 */}
+        {/* 견적서 시트 - 캡처 영역 */}
         <div
           ref={invoiceRef}
-          className="bg-white shadow-premium rounded-[2rem] overflow-hidden border border-[#f1f5f9]"
-          style={{ minHeight: '1120px' }}
+          className="bg-white shadow-premium rounded-[2rem] overflow-hidden"
+          style={{
+            minHeight: '1120px',
+            backgroundColor: COLORS.white,
+            border: `1px solid ${COLORS.slate100}`,
+          }}
         >
           {/* 견적서 상단 */}
-          <div className="bg-[#0f172a] text-white p-12 flex justify-between items-end relative overflow-hidden">
+          <div style={{ backgroundColor: COLORS.slate900, color: COLORS.white }} className="p-12 flex justify-between items-end relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl -mr-20 -mt-20" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}></div>
             <div className="relative z-10">
               <h1 className="text-5xl font-black tracking-tighter mb-2">견 적 서</h1>
-              <p className="text-[#94a3b8] font-medium tracking-[0.2em] uppercase text-sm">Official Quotation</p>
+              <p style={{ color: COLORS.slate400 }} className="font-medium tracking-[0.2em] uppercase text-sm">Official Quotation</p>
             </div>
             <div className="text-right flex flex-col items-end relative z-10">
               <div className="relative mb-2">
-                <span className="text-2xl font-black tracking-tight underline underline-offset-8 uppercase" style={{ textDecorationColor: '#3b82f6' }}>AI Partners</span>
+                <span className="text-2xl font-black tracking-tight underline underline-offset-8 uppercase" style={{ textDecorationColor: COLORS.blue500 }}>AI Partners</span>
               </div>
-              <p className="text-xs text-[#94a3b8] font-medium">Professional AI Education & Service Solutions</p>
+              <p style={{ color: COLORS.slate400 }} className="text-xs font-medium">Professional AI Education & Service Solutions</p>
             </div>
           </div>
 
@@ -255,10 +261,14 @@ export default function InvoiceEditor() {
             <div className="grid grid-cols-2 gap-20 mb-16">
               <div className="space-y-8">
                 <div>
-                  <h2 className="text-[10px] font-black text-[#2563eb] uppercase tracking-widest mb-4">수신 (Client Information)</h2>
+                  <h2 style={{ color: COLORS.blue600 }} className="text-[10px] font-black uppercase tracking-widest mb-4">수신 (Client Information)</h2>
                   <input
                     type="text"
-                    className="text-3xl font-black w-full border-b-2 border-[#e2e8f0] focus:border-[#2563eb] outline-none pb-2 transition-colors placeholder:text-[#e2e8f0] text-[#0f172a]"
+                    style={{
+                      borderBottom: `2px solid ${COLORS.slate100}`,
+                      color: COLORS.slate900
+                    }}
+                    className="text-3xl font-black w-full outline-none pb-2 transition-colors placeholder:text-slate-200"
                     placeholder="고객사/기관명 귀중"
                     value={clientName}
                     onChange={(e) => setClientName(e.target.value)}
@@ -266,19 +276,27 @@ export default function InvoiceEditor() {
                 </div>
                 <div className="space-y-4">
                   <div className="flex items-center group">
-                    <span className="w-24 text-xs font-bold text-[#94a3b8] uppercase tracking-tighter">Issue Date</span>
+                    <span style={{ color: COLORS.slate400 }} className="w-24 text-xs font-bold uppercase tracking-tighter">Issue Date</span>
                     <input
                       type="date"
-                      className="flex-1 bg-[#f8fafc] px-3 py-1.5 rounded-lg text-sm font-semibold text-[#334155] outline-none focus:ring-2 focus:ring-[#dbeafe] transition-all font-mono"
+                      style={{
+                        backgroundColor: COLORS.slate50,
+                        color: COLORS.slate700
+                      }}
+                      className="flex-1 px-3 py-1.5 rounded-lg text-sm font-semibold outline-none transition-all font-mono"
                       value={docDate}
                       onChange={(e) => setDocDate(e.target.value)}
                     />
                   </div>
                   <div className="flex items-center group">
-                    <span className="w-24 text-xs font-bold text-[#94a3b8] uppercase tracking-tighter">Project Name</span>
+                    <span style={{ color: COLORS.slate400 }} className="w-24 text-xs font-bold uppercase tracking-tighter">Project Name</span>
                     <input
                       type="text"
-                      className="flex-1 bg-[#f8fafc] px-3 py-1.5 rounded-lg text-sm font-semibold text-[#334155] outline-none focus:ring-2 focus:ring-[#dbeafe] transition-all placeholder:text-[#cbd5e1]"
+                      style={{
+                        backgroundColor: COLORS.slate50,
+                        color: COLORS.slate700
+                      }}
+                      className="flex-1 px-3 py-1.5 rounded-lg text-sm font-semibold outline-none transition-all placeholder:text-slate-300"
                       placeholder="프로젝트 또는 교육명을 입력하세요"
                       value={projectTitle}
                       onChange={(e) => setProjectTitle(e.target.value)}
@@ -288,7 +306,7 @@ export default function InvoiceEditor() {
               </div>
 
               <div>
-                <h2 className="text-[10px] font-black text-[#94a3b8] uppercase tracking-widest mb-6 border-b border-[#f1f5f9] pb-2">공급자 (Our Company)</h2>
+                <h2 style={{ color: COLORS.slate400, borderBottom: `1px solid ${COLORS.slate100}` }} className="text-[10px] font-black uppercase tracking-widest mb-6 pb-2">공급자 (Our Company)</h2>
                 <div className="grid grid-cols-1 gap-3 relative">
                   {[
                     ['사업자번호', '205-23-75240'],
@@ -298,18 +316,20 @@ export default function InvoiceEditor() {
                     ['연 락 처', '010-9911-2585 / aip@aipart.io'],
                   ].map(([label, value]) => (
                     <div key={label} className="flex text-sm">
-                      <span className="min-w-[80px] text-[#94a3b8] font-medium">{label}</span>
-                      <span className="font-bold text-[#0f172a]">{value}</span>
+                      <span style={{ color: COLORS.slate400 }} className="min-w-[80px] font-medium">{label}</span>
+                      <span style={{ color: COLORS.slate900 }} className="font-bold">{value}</span>
                     </div>
                   ))}
 
-                  {/* 도장 위치 */}
                   <div className="absolute right-0 top-1/2 -translate-y-1/2 w-24 h-24 flex items-center justify-center">
                     {stampImage ? (
                       <img src={stampImage} alt="Stamp" className="w-full h-full object-contain opacity-90 rotate-[-10deg]" />
                     ) : (
-                      <label className="no-print cursor-pointer w-14 h-14 border-2 border-dashed border-[#e2e8f0] rounded-full flex items-center justify-center hover:bg-[#f8fafc] transition-colors">
-                        <ImageIcon size={20} className="text-[#cbd5e1]" />
+                      <label
+                        style={{ border: `2px dashed ${COLORS.slate200}` }}
+                        className="no-print cursor-pointer w-14 h-14 rounded-full flex items-center justify-center hover:bg-slate-50 transition-colors"
+                      >
+                        <ImageIcon size={20} style={{ color: COLORS.slate300 }} />
                         <input type="file" className="hidden" onChange={handleStampUpload} accept="image/*" />
                       </label>
                     )}
@@ -322,7 +342,7 @@ export default function InvoiceEditor() {
             <div className="mb-12">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-y-2 border-[#0f172a] text-[#0f172a] text-[10px] uppercase tracking-[0.2em] font-black">
+                  <tr style={{ borderTop: `2px solid ${COLORS.slate900}`, borderBottom: `2px solid ${COLORS.slate900}`, color: COLORS.slate900 }} className="text-[10px] uppercase tracking-[0.2em] font-black">
                     <th className="px-4 py-4 w-12 text-center">No.</th>
                     <th className="px-4 py-4">항목 및 세부 세부사항</th>
                     <th className="px-4 py-4 text-right w-32">단가 (KRW)</th>
@@ -331,21 +351,23 @@ export default function InvoiceEditor() {
                     <th className="px-4 py-4 w-12 no-print"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody style={{ borderBottom: `1px solid ${COLORS.slate100}` }}>
                   {items.map((item, idx) => (
-                    <tr key={item.id} className="group hover:bg-blue-50/30 transition-colors">
-                      <td className="px-4 py-5 text-center text-slate-300 text-xs font-black">{idx + 1}</td>
+                    <tr key={item.id} style={{ borderBottom: `1px solid ${COLORS.slate100}` }} className="group">
+                      <td style={{ color: COLORS.slate300 }} className="px-4 py-5 text-center text-xs font-black">{idx + 1}</td>
                       <td className="px-4 py-5 space-y-1">
                         <input
                           type="text"
-                          className="w-full bg-transparent font-bold text-slate-900 outline-none placeholder:text-slate-200"
+                          style={{ color: COLORS.slate900 }}
+                          className="w-full bg-transparent font-bold outline-none placeholder:text-slate-200"
                           placeholder="품목명을 입력하세요"
                           value={item.name}
                           onChange={(e) => updateItem(item.id, 'name', e.target.value)}
                         />
                         <input
                           type="text"
-                          className="w-full bg-transparent text-xs text-slate-400 outline-none placeholder:text-slate-200"
+                          style={{ color: COLORS.slate400 }}
+                          className="w-full bg-transparent text-xs outline-none placeholder:text-slate-200"
                           placeholder="세부 기술 사양 또는 관련 정보를 입력하세요"
                           value={item.details}
                           onChange={(e) => updateItem(item.id, 'details', e.target.value)}
@@ -354,7 +376,8 @@ export default function InvoiceEditor() {
                       <td className="px-4 py-5">
                         <input
                           type="text"
-                          className="w-full bg-transparent text-right font-semibold text-slate-700 outline-none"
+                          style={{ color: COLORS.slate700 }}
+                          className="w-full bg-transparent text-right font-semibold outline-none"
                           value={formatWithCommas(item.price)}
                           onChange={(e) => updateItem(item.id, 'price', parseFormattedNumber(e.target.value))}
                         />
@@ -362,16 +385,21 @@ export default function InvoiceEditor() {
                       <td className="px-4 py-5">
                         <input
                           type="number"
-                          className="w-full bg-transparent text-center font-semibold text-slate-600 outline-none"
+                          style={{ color: COLORS.slate700 }}
+                          className="w-full bg-transparent text-center font-semibold outline-none"
                           value={item.qty || ''}
                           onChange={(e) => updateItem(item.id, 'qty', parseInt(e.target.value) || 0)}
                         />
                       </td>
-                      <td className="px-4 py-5 text-right font-black text-slate-900">
+                      <td style={{ color: COLORS.slate900 }} className="px-4 py-5 text-right font-black">
                         {(item.price * item.qty).toLocaleString()}
                       </td>
-                      <td className="px-4 py-5 text-center no-print text-slate-200 hover:text-red-500 transition-colors">
-                        <button onClick={() => removeItem(item.id)}>
+                      <td className="px-4 py-5 text-center no-print">
+                        <button
+                          onClick={() => removeItem(item.id)}
+                          style={{ color: COLORS.slate200 }}
+                          className="hover:text-red-500 transition-colors"
+                        >
                           <Trash2 size={16} />
                         </button>
                       </td>
@@ -381,7 +409,8 @@ export default function InvoiceEditor() {
               </table>
               <button
                 onClick={addRow}
-                className="no-print mt-6 flex items-center space-x-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-900 text-xs rounded-lg transition-all font-bold tracking-tight border border-transparent hover:border-slate-200"
+                style={{ backgroundColor: COLORS.slate50, color: COLORS.slate500 }}
+                className="no-print mt-6 flex items-center space-x-2 px-4 py-2 hover:bg-slate-100 hover:text-slate-900 text-xs rounded-lg transition-all font-bold tracking-tight border border-transparent"
               >
                 <Plus size={14} />
                 <span>라인 아이템 추가</span>
@@ -389,23 +418,29 @@ export default function InvoiceEditor() {
             </div>
 
             {/* 정산 영역 */}
-            <div className="flex justify-end pt-8 border-t-2 border-[#0f172a]">
+            <div style={{ borderTop: `2px solid ${COLORS.slate900}` }} className="flex justify-end pt-8">
               <div className="w-full md:w-96 space-y-4">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-[#94a3b8] font-bold uppercase tracking-widest text-[10px]">Total Subtotal</span>
-                  <span className="font-bold text-[#475569] font-mono tracking-tighter">{subtotal.toLocaleString()}</span>
+                  <span style={{ color: COLORS.slate400 }} className="font-bold uppercase tracking-widest text-[10px]">Total Subtotal</span>
+                  <span style={{ color: COLORS.slate600 }} className="font-bold font-mono tracking-tighter">{subtotal.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-[#94a3b8] font-bold uppercase tracking-widest text-[10px]">VAT (10%)</span>
-                  <span className="font-bold text-[#475569] font-mono tracking-tighter">{vat.toLocaleString()}</span>
+                  <span style={{ color: COLORS.slate400 }} className="font-bold uppercase tracking-widest text-[10px]">VAT (10%)</span>
+                  <span style={{ color: COLORS.slate600 }} className="font-bold font-mono tracking-tighter">{vat.toLocaleString()}</span>
                 </div>
 
-                {/* 할인 입력 필드 */}
-                <div className="flex flex-col space-y-2 py-3 border-y border-dashed border-[#f1f5f9]">
+                <div
+                  style={{
+                    borderTop: `1px dashed ${COLORS.slate100}`,
+                    borderBottom: `1px dashed ${COLORS.slate100}`
+                  }}
+                  className="flex flex-col space-y-2 py-3"
+                >
                   <div className="flex justify-between items-center">
                     <input
                       type="text"
-                      className="bg-transparent border-none outline-none text-[10px] font-black text-[#2563eb] uppercase tracking-widest w-1/2 placeholder:text-[#dbeafe]"
+                      style={{ color: COLORS.blue500 }}
+                      className="bg-transparent border-none outline-none text-[10px] font-black uppercase tracking-widest w-1/2 placeholder:text-blue-100"
                       placeholder="할인 항목 입력 (예: 프로모션)"
                       value={discountName}
                       onChange={(e) => setDiscountName(e.target.value)}
@@ -413,13 +448,15 @@ export default function InvoiceEditor() {
                     <div className="flex items-center space-x-2">
                       <input
                         type="text"
-                        className="w-24 bg-[#f8fafc] px-2 py-1 rounded text-right font-bold text-[#0f172a] outline-none text-xs"
+                        style={{ backgroundColor: COLORS.slate50, color: COLORS.slate900 }}
+                        className="w-24 px-2 py-1 rounded text-right font-bold outline-none text-xs"
                         placeholder="0"
                         value={formatWithCommas(discountAmount)}
                         onChange={(e) => setDiscountAmount(parseFormattedNumber(e.target.value))}
                       />
                       <select
-                        className="bg-[#f8fafc] border-none rounded text-[10px] font-bold text-[#64748b] outline-none p-1 cursor-pointer"
+                        style={{ backgroundColor: COLORS.slate50, color: COLORS.slate500 }}
+                        className="border-none rounded text-[10px] font-bold outline-none p-1 cursor-pointer"
                         value={isPercentDiscount ? 'percent' : 'amount'}
                         onChange={(e) => setIsPercentDiscount(e.target.value === 'percent')}
                       >
@@ -430,22 +467,22 @@ export default function InvoiceEditor() {
                   </div>
                   {calculatedDiscount > 0 && (
                     <div className="flex justify-between items-center text-xs text-right">
-                      <span className="text-[#94a3b8] font-medium italic">Calculated Discount:</span>
-                      <span className="text-[#ef4444] font-bold font-mono">- {calculatedDiscount.toLocaleString()}</span>
+                      <span style={{ color: COLORS.slate400 }} className="font-medium italic">Calculated Discount:</span>
+                      <span style={{ color: COLORS.red500 }} className="font-bold font-mono">- {calculatedDiscount.toLocaleString()}</span>
                     </div>
                   )}
                 </div>
 
                 <div className="flex justify-between items-center pt-4">
-                  <span className="text-[#2563eb] font-black uppercase tracking-widest text-xs">Total Amount</span>
-                  <span className="text-3xl font-black text-[#0f172a] font-mono">₩ {total.toLocaleString()}</span>
+                  <span style={{ color: COLORS.blue600 }} className="font-black uppercase tracking-widest text-xs">Total Amount</span>
+                  <span style={{ color: COLORS.slate900 }} className="text-3xl font-black font-mono">₩ {total.toLocaleString()}</span>
                 </div>
               </div>
             </div>
 
             {/* 하단 푸터 */}
             <div className="mt-32 text-center space-y-6">
-              <p className="text-slate-900 font-bold text-lg">위와 같이 견적 내용을 제출합니다.</p>
+              <p style={{ color: COLORS.slate900 }} className="font-bold text-lg">위와 같이 견적 내용을 제출합니다.</p>
             </div>
           </div>
         </div>
