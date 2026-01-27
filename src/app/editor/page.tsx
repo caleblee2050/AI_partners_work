@@ -6,6 +6,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
 interface InvoiceItem {
   id: number;
@@ -35,6 +36,14 @@ const COLORS = {
 };
 
 export default function InvoiceEditor() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center font-bold text-slate-400">페이지를 준비 중입니다...</div>}>
+      <InvoiceEditorContent />
+    </Suspense>
+  );
+}
+
+function InvoiceEditorContent() {
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [docDate, setDocDate] = useState(new Date().toISOString().split('T')[0]);
   const [clientName, setClientName] = useState('');
