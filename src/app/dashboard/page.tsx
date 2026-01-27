@@ -125,12 +125,13 @@ export default function DashboardPage() {
                                     <td className="px-6 py-5">
                                         <div className="flex items-center justify-center space-x-3 opacity-0 group-hover:opacity-100 transition-opacity">
                                             {/* TODO: 상세 보기 기능 연결 */}
-                                            <button
+                                            <Link
+                                                href={`/editor?id=${inv.id}`}
                                                 className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
                                                 title="자세히 보기"
                                             >
                                                 <ExternalLink size={18} />
-                                            </button>
+                                            </Link>
                                             <button
                                                 onClick={() => handleDelete(inv.id)}
                                                 className="p-2 text-slate-400 hover:text-red-500 transition-colors"

@@ -5,6 +5,7 @@ import { Plus, Download, Save, Printer, Image as ImageIcon, ChevronLeft, Trash2 
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 interface InvoiceItem {
   id: number;
@@ -46,7 +47,9 @@ export default function InvoiceEditor() {
 
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [invoiceId, setInvoiceId] = useState<string | null>(null);
   const invoiceRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     const handleBeforePrint = () => setIsPrinting(true);
@@ -62,33 +65,61 @@ export default function InvoiceEditor() {
   }, []);
 
   useEffect(() => {
-    const savedData = localStorage.getItem('invoice_draft');
-    if (savedData) {
+    const fetchInvoice = async (id: string) => {
       try {
-        const parsed = JSON.parse(savedData);
-        setItems(parsed.items || []);
-        setDocDate(parsed.docDate || new Date().toISOString().split('T')[0]);
-        setClientName(parsed.clientName || '');
-        setProjectTitle(parsed.projectTitle || '');
-        setStampImage(parsed.stampImage || null);
-        setDiscountName(parsed.discountName || '');
-        setDiscountAmount(parsed.discountAmount || 0);
-        setIsPercentDiscount(parsed.isPercentDiscount || false);
-      } catch (e) {
-        console.error('Failed to load draft:', e);
+        const response = await fetch(`/api/invoices?id=${id}`);
+        const result = await response.json();
+        if (result.success && result.data) {
+          const inv = result.data;
+          setInvoiceId(id);
+          setClientName(inv.client_name || '');
+          setDocDate(inv.doc_date || '');
+          setProjectTitle(inv.project_title || '');
+          setItems(JSON.parse(inv.items) || []);
+          setDiscountName(inv.discount_name || '');
+          setDiscountAmount(inv.discount_amount || 0);
+          setIsPercentDiscount(!!inv.is_percent_discount);
+          // 도장 이미지는 별도로 저장되지 않으므로 draft나 기본값 유지 (필요시 DB 확장)
+        }
+      } catch (error) {
+        console.error('Failed to fetch invoice:', error);
+      } finally {
+        setIsLoaded(true);
       }
+    };
+
+    const id = searchParams.get('id');
+    if (id) {
+      fetchInvoice(id);
     } else {
-      const initialItems = Array.from({ length: 5 }, (_, i) => ({
-        id: i + 1,
-        name: '',
-        details: '',
-        price: 0,
-        qty: 0,
-      }));
-      setItems(initialItems);
+      const savedData = localStorage.getItem('invoice_draft');
+      if (savedData) {
+        try {
+          const parsed = JSON.parse(savedData);
+          setItems(parsed.items || []);
+          setDocDate(parsed.docDate || new Date().toISOString().split('T')[0]);
+          setClientName(parsed.clientName || '');
+          setProjectTitle(parsed.projectTitle || '');
+          setStampImage(parsed.stampImage || null);
+          setDiscountName(parsed.discountName || '');
+          setDiscountAmount(parsed.discountAmount || 0);
+          setIsPercentDiscount(parsed.isPercentDiscount || false);
+        } catch (e) {
+          console.error('Failed to load draft:', e);
+        }
+      } else {
+        const initialItems = Array.from({ length: 5 }, (_, i) => ({
+          id: i + 1,
+          name: '',
+          details: '',
+          price: 0,
+          qty: 0,
+        }));
+        setItems(initialItems);
+      }
+      setIsLoaded(true);
     }
-    setIsLoaded(true);
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -184,19 +215,23 @@ export default function InvoiceEditor() {
   const saveToDB = async () => {
     try {
       const dbData = {
+        id: invoiceId,
         clientName, docDate, projectTitle, items, subtotal, vat,
         discountName, discountAmount, isPercentDiscount, total,
       };
 
       const response = await fetch('/api/invoices', {
-        method: 'POST',
+        method: invoiceId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(dbData),
       });
 
       const result = await response.json();
       if (result.success) {
-        alert('견적서가 성공적으로 저장되었습니다!');
+        alert(invoiceId ? '견적서가 성공적으로 수정되었습니다!' : '견적서가 성공적으로 저장되었습니다!');
+        if (!invoiceId && result.id) {
+          setInvoiceId(result.id.toString());
+        }
       } else {
         alert('저장 실패: ' + (result.error || '알 수 없는 오류'));
       }
