@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Download, Save, Printer, Image as ImageIcon, ChevronLeft } from 'lucide-react';
+import { Plus, Download, Save, Printer, Image as ImageIcon, ChevronLeft, Trash2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import Link from 'next/link';
@@ -45,6 +45,14 @@ export default function InvoiceEditor() {
       ...prev,
       { id: Date.now(), name: '', details: '', price: 0, qty: 0 },
     ]);
+  };
+
+  const removeItem = (id: number) => {
+    if (items.length <= 1) {
+      alert('최소 하나의 품목은 있어야 합니다.');
+      return;
+    }
+    setItems((prev) => prev.filter(item => item.id !== id));
   };
 
   const updateItem = (id: number, field: keyof InvoiceItem, value: string | number) => {
@@ -126,8 +134,17 @@ export default function InvoiceEditor() {
     }
   };
 
+  const formatWithCommas = (value: number) => {
+    if (value === 0) return '';
+    return value.toLocaleString();
+  };
+
+  const parseFormattedNumber = (value: string) => {
+    return parseInt(value.replace(/,/g, '')) || 0;
+  };
+
   return (
-    <main className="bg-slate-50 min-h-screen py-10 px-4">
+    <main className="bg-slate-50 min-h-screen py-10 px-4 font-sans">
       <div className="max-w-5xl mx-auto space-y-8">
         {/* 상단 액션바 */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0 no-print">
@@ -189,7 +206,7 @@ export default function InvoiceEditor() {
                   <h2 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-4">수신 (Client Information)</h2>
                   <input
                     type="text"
-                    className="text-3xl font-black w-full border-b-2 border-slate-100 focus:border-blue-500 outline-none pb-2 transition-colors placeholder:text-slate-100"
+                    className="text-3xl font-black w-full border-b-2 border-slate-100 focus:border-blue-500 outline-none pb-2 transition-colors placeholder:text-slate-200 text-slate-900"
                     placeholder="고객사/기관명 귀중"
                     value={clientName}
                     onChange={(e) => setClientName(e.target.value)}
@@ -234,7 +251,7 @@ export default function InvoiceEditor() {
                     </div>
                   ))}
 
-                  {/* 도장 위치 변경 */}
+                  {/* 도장 위치 */}
                   <div className="absolute right-0 top-1/2 -translate-y-1/2 w-24 h-24 flex items-center justify-center">
                     {stampImage ? (
                       <img src={stampImage} alt="Stamp" className="w-full h-full object-contain opacity-90 rotate-[-10deg]" />
@@ -259,6 +276,7 @@ export default function InvoiceEditor() {
                     <th className="px-4 py-4 text-right w-32">단가 (KRW)</th>
                     <th className="px-4 py-4 text-center w-20">수량</th>
                     <th className="px-4 py-4 text-right w-40">합계 금액</th>
+                    <th className="px-4 py-4 w-12 no-print"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -283,10 +301,10 @@ export default function InvoiceEditor() {
                       </td>
                       <td className="px-4 py-5">
                         <input
-                          type="number"
+                          type="text"
                           className="w-full bg-transparent text-right font-semibold text-slate-600 outline-none"
-                          value={item.price || ''}
-                          onChange={(e) => updateItem(item.id, 'price', parseInt(e.target.value) || 0)}
+                          value={formatWithCommas(item.price)}
+                          onChange={(e) => updateItem(item.id, 'price', parseFormattedNumber(e.target.value))}
                         />
                       </td>
                       <td className="px-4 py-5">
@@ -299,6 +317,14 @@ export default function InvoiceEditor() {
                       </td>
                       <td className="px-4 py-5 text-right font-black text-slate-900">
                         {(item.price * item.qty).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-5 text-center no-print">
+                        <button
+                          onClick={() => removeItem(item.id)}
+                          className="text-slate-200 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -325,7 +351,7 @@ export default function InvoiceEditor() {
                   <span className="font-bold text-slate-600 font-mono tracking-tighter">{vat.toLocaleString()}</span>
                 </div>
 
-                {/* 할인 입력 필드 추가 */}
+                {/* 할인 입력 필드 */}
                 <div className="flex flex-col space-y-2 py-3 border-y border-dashed border-slate-100">
                   <div className="flex justify-between items-center">
                     <input
@@ -337,11 +363,11 @@ export default function InvoiceEditor() {
                     />
                     <div className="flex items-center space-x-2">
                       <input
-                        type="number"
-                        className="w-20 bg-slate-50 px-2 py-1 rounded text-right font-bold text-slate-600 outline-none text-xs"
+                        type="text"
+                        className="w-24 bg-slate-50 px-2 py-1 rounded text-right font-bold text-slate-900 outline-none text-xs"
                         placeholder="0"
-                        value={discountAmount || ''}
-                        onChange={(e) => setDiscountAmount(parseInt(e.target.value) || 0)}
+                        value={formatWithCommas(discountAmount)}
+                        onChange={(e) => setDiscountAmount(parseFormattedNumber(e.target.value))}
                       />
                       <select
                         className="bg-slate-50 border-none rounded text-[10px] font-bold text-slate-500 outline-none p-1 cursor-pointer"
@@ -354,7 +380,7 @@ export default function InvoiceEditor() {
                     </div>
                   </div>
                   {calculatedDiscount > 0 && (
-                    <div className="flex justify-between items-center text-xs">
+                    <div className="flex justify-between items-center text-xs text-right">
                       <span className="text-slate-400 font-medium italic">Calculated Discount:</span>
                       <span className="text-red-500 font-bold font-mono">- {calculatedDiscount.toLocaleString()}</span>
                     </div>
@@ -371,10 +397,6 @@ export default function InvoiceEditor() {
             {/* 하단 푸터 */}
             <div className="mt-32 text-center space-y-6">
               <p className="text-slate-900 font-bold text-lg">위와 같이 견적 내용을 제출합니다.</p>
-              <div className="flex flex-col items-center">
-                <p className="text-slate-400 text-xs font-medium uppercase tracking-widest mb-1">Company Representative</p>
-                <p className="text-slate-900 font-black text-xl italic tracking-tighter">AI 파트너스 대표 이충우 (인)</p>
-              </div>
             </div>
           </div>
         </div>
