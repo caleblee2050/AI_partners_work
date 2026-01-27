@@ -45,7 +45,21 @@ export default function InvoiceEditor() {
   const [isPercentDiscount, setIsPercentDiscount] = useState(false);
 
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleBeforePrint = () => setIsPrinting(true);
+    const handleAfterPrint = () => setIsPrinting(false);
+
+    window.addEventListener('beforeprint', handleBeforePrint);
+    window.addEventListener('afterprint', handleAfterPrint);
+
+    return () => {
+      window.removeEventListener('beforeprint', handleBeforePrint);
+      window.removeEventListener('afterprint', handleAfterPrint);
+    };
+  }, []);
 
   useEffect(() => {
     const savedData = localStorage.getItem('invoice_draft');
@@ -129,6 +143,10 @@ export default function InvoiceEditor() {
     }
 
     try {
+      setIsPrinting(true);
+      // React 렌더링을 기다리기 위해 약간의 지연 시간을 둡니다.
+      await new Promise(resolve => setTimeout(resolve, 300));
+
       const canvas = await html2canvas(invoiceRef.current, {
         scale: 3,
         useCORS: true,
@@ -146,7 +164,9 @@ export default function InvoiceEditor() {
       pdf.save(`견적서_${clientName || '알수없음'}_${docDate}.pdf`);
     } catch (error) {
       console.error('PDF Generation Error:', error);
-      alert('PDF 생성 중 오류가 발생했습니다. 브라우저 콘솔을 확인해 주세요.');
+      alert('PDF 생성 중 오류가 발생했습니다.');
+    } finally {
+      setIsPrinting(false);
     }
   };
 
@@ -187,7 +207,7 @@ export default function InvoiceEditor() {
   };
 
   const formatWithCommas = (value: number) => {
-    if (value === 0) return '';
+    if (value === 0) return isPrinting ? '0' : '';
     return value.toLocaleString();
   };
 
@@ -196,6 +216,9 @@ export default function InvoiceEditor() {
   };
 
   if (!isLoaded) return <div className="min-h-screen bg-slate-50 flex items-center justify-center font-bold text-slate-400">데이터를 불러오는 중...</div>;
+
+  // 출력 시에는 이름이 있는 행만 표시
+  const displayItems = isPrinting ? items.filter(item => item.name.trim() !== '') : items;
 
   return (
     <main className="bg-slate-50 min-h-screen py-10 px-4 font-sans">
@@ -234,11 +257,14 @@ export default function InvoiceEditor() {
         {/* 견적서 시트 - 캡처 영역 */}
         <div
           ref={invoiceRef}
-          className="bg-white shadow-premium rounded-[2rem] overflow-hidden"
+          className="bg-white"
           style={{
             minHeight: '1120px',
             backgroundColor: COLORS.white,
-            border: `1px solid ${COLORS.slate100}`,
+            border: isPrinting ? 'none' : `1px solid ${COLORS.slate100}`,
+            boxShadow: isPrinting ? 'none' : '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            borderRadius: isPrinting ? '0' : '2rem',
+            overflow: 'hidden'
           }}
         >
           {/* 견적서 상단 */}
@@ -262,45 +288,50 @@ export default function InvoiceEditor() {
               <div className="space-y-8">
                 <div>
                   <h2 style={{ color: COLORS.blue600 }} className="text-[10px] font-black uppercase tracking-widest mb-4">수신 (Client Information)</h2>
-                  <input
-                    type="text"
-                    style={{
-                      borderBottom: `2px solid ${COLORS.slate100}`,
-                      color: COLORS.slate900
-                    }}
-                    className="text-3xl font-black w-full outline-none pb-2 transition-colors placeholder:text-slate-200"
-                    placeholder="고객사/기관명 귀중"
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                  />
+                  {isPrinting ? (
+                    <div className="text-3xl font-black pb-2 min-h-[44px]" style={{ color: COLORS.slate900 }}>
+                      {clientName || '고객사 귀중'}
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      className="text-3xl font-black w-full outline-none pb-2 transition-colors placeholder:text-slate-200"
+                      style={{ borderBottom: `2px solid ${COLORS.slate100}`, color: COLORS.slate900 }}
+                      placeholder="고객사/기관명 귀중"
+                      value={clientName}
+                      onChange={(e) => setClientName(e.target.value)}
+                    />
+                  )}
                 </div>
                 <div className="space-y-4">
                   <div className="flex items-center group">
                     <span style={{ color: COLORS.slate400 }} className="w-24 text-xs font-bold uppercase tracking-tighter">Issue Date</span>
-                    <input
-                      type="date"
-                      style={{
-                        backgroundColor: COLORS.slate50,
-                        color: COLORS.slate700
-                      }}
-                      className="flex-1 px-3 py-1.5 rounded-lg text-sm font-semibold outline-none transition-all font-mono"
-                      value={docDate}
-                      onChange={(e) => setDocDate(e.target.value)}
-                    />
+                    {isPrinting ? (
+                      <div className="text-sm font-semibold font-mono" style={{ color: COLORS.slate700 }}>{docDate}</div>
+                    ) : (
+                      <input
+                        type="date"
+                        className="flex-1 px-3 py-1.5 rounded-lg text-sm font-semibold outline-none transition-all font-mono"
+                        style={{ backgroundColor: COLORS.slate50, color: COLORS.slate700 }}
+                        value={docDate}
+                        onChange={(e) => setDocDate(e.target.value)}
+                      />
+                    )}
                   </div>
                   <div className="flex items-center group">
                     <span style={{ color: COLORS.slate400 }} className="w-24 text-xs font-bold uppercase tracking-tighter">Project Name</span>
-                    <input
-                      type="text"
-                      style={{
-                        backgroundColor: COLORS.slate50,
-                        color: COLORS.slate700
-                      }}
-                      className="flex-1 px-3 py-1.5 rounded-lg text-sm font-semibold outline-none transition-all placeholder:text-slate-300"
-                      placeholder="프로젝트 또는 교육명을 입력하세요"
-                      value={projectTitle}
-                      onChange={(e) => setProjectTitle(e.target.value)}
-                    />
+                    {isPrinting ? (
+                      <div className="text-sm font-semibold" style={{ color: COLORS.slate700 }}>{projectTitle || '-'}</div>
+                    ) : (
+                      <input
+                        type="text"
+                        className="flex-1 px-3 py-1.5 rounded-lg text-sm font-semibold outline-none transition-all placeholder:text-slate-300"
+                        style={{ backgroundColor: COLORS.slate50, color: COLORS.slate700 }}
+                        placeholder="프로젝트 또는 교육명을 입력하세요"
+                        value={projectTitle}
+                        onChange={(e) => setProjectTitle(e.target.value)}
+                      />
+                    )}
                   </div>
                 </div>
               </div>
@@ -352,44 +383,63 @@ export default function InvoiceEditor() {
                   </tr>
                 </thead>
                 <tbody style={{ borderBottom: `1px solid ${COLORS.slate100}` }}>
-                  {items.map((item, idx) => (
+                  {displayItems.map((item, idx) => (
                     <tr key={item.id} style={{ borderBottom: `1px solid ${COLORS.slate100}` }} className="group">
                       <td style={{ color: COLORS.slate300 }} className="px-4 py-5 text-center text-xs font-black">{idx + 1}</td>
                       <td className="px-4 py-5 space-y-1">
-                        <input
-                          type="text"
-                          style={{ color: COLORS.slate900 }}
-                          className="w-full bg-transparent font-bold outline-none placeholder:text-slate-200"
-                          placeholder="품목명을 입력하세요"
-                          value={item.name}
-                          onChange={(e) => updateItem(item.id, 'name', e.target.value)}
-                        />
-                        <input
-                          type="text"
-                          style={{ color: COLORS.slate400 }}
-                          className="w-full bg-transparent text-xs outline-none placeholder:text-slate-200"
-                          placeholder="세부 기술 사양 또는 관련 정보를 입력하세요"
-                          value={item.details}
-                          onChange={(e) => updateItem(item.id, 'details', e.target.value)}
-                        />
+                        {isPrinting ? (
+                          <>
+                            <div style={{ color: COLORS.slate900 }} className="font-bold">{item.name}</div>
+                            {item.details && <div style={{ color: COLORS.slate400 }} className="text-xs">{item.details}</div>}
+                          </>
+                        ) : (
+                          <>
+                            <input
+                              type="text"
+                              style={{ color: COLORS.slate900 }}
+                              className="w-full bg-transparent font-bold outline-none placeholder:text-slate-200"
+                              placeholder="품목명을 입력하세요"
+                              value={item.name}
+                              onChange={(e) => updateItem(item.id, 'name', e.target.value)}
+                            />
+                            <input
+                              type="text"
+                              style={{ color: COLORS.slate400 }}
+                              className="w-full bg-transparent text-xs outline-none placeholder:text-slate-200"
+                              placeholder="세부 기술 사양 또는 관련 정보를 입력하세요"
+                              value={item.details}
+                              onChange={(e) => updateItem(item.id, 'details', e.target.value)}
+                            />
+                          </>
+                        )}
                       </td>
                       <td className="px-4 py-5">
-                        <input
-                          type="text"
-                          style={{ color: COLORS.slate700 }}
-                          className="w-full bg-transparent text-right font-semibold outline-none"
-                          value={formatWithCommas(item.price)}
-                          onChange={(e) => updateItem(item.id, 'price', parseFormattedNumber(e.target.value))}
-                        />
+                        {isPrinting ? (
+                          <div style={{ color: COLORS.slate700 }} className="text-right font-semibold">
+                            {formatWithCommas(item.price)}
+                          </div>
+                        ) : (
+                          <input
+                            type="text"
+                            style={{ color: COLORS.slate700 }}
+                            className="w-full bg-transparent text-right font-semibold outline-none"
+                            value={formatWithCommas(item.price)}
+                            onChange={(e) => updateItem(item.id, 'price', parseFormattedNumber(e.target.value))}
+                          />
+                        )}
                       </td>
-                      <td className="px-4 py-5">
-                        <input
-                          type="number"
-                          style={{ color: COLORS.slate700 }}
-                          className="w-full bg-transparent text-center font-semibold outline-none"
-                          value={item.qty || ''}
-                          onChange={(e) => updateItem(item.id, 'qty', parseInt(e.target.value) || 0)}
-                        />
+                      <td className="px-4 py-5 text-center">
+                        {isPrinting ? (
+                          <div style={{ color: COLORS.slate700 }} className="font-semibold">{item.qty}</div>
+                        ) : (
+                          <input
+                            type="number"
+                            style={{ color: COLORS.slate700 }}
+                            className="w-full bg-transparent text-center font-semibold outline-none"
+                            value={item.qty || ''}
+                            onChange={(e) => updateItem(item.id, 'qty', parseInt(e.target.value) || 0)}
+                          />
+                        )}
                       </td>
                       <td style={{ color: COLORS.slate900 }} className="px-4 py-5 text-right font-black">
                         {(item.price * item.qty).toLocaleString()}
@@ -437,32 +487,46 @@ export default function InvoiceEditor() {
                   className="flex flex-col space-y-2 py-3"
                 >
                   <div className="flex justify-between items-center">
-                    <input
-                      type="text"
-                      style={{ color: COLORS.blue500 }}
-                      className="bg-transparent border-none outline-none text-[10px] font-black uppercase tracking-widest w-1/2 placeholder:text-blue-100"
-                      placeholder="할인 항목 입력 (예: 프로모션)"
-                      value={discountName}
-                      onChange={(e) => setDiscountName(e.target.value)}
-                    />
-                    <div className="flex items-center space-x-2">
+                    {isPrinting ? (
+                      <div style={{ color: COLORS.blue500 }} className="text-[10px] font-black uppercase tracking-widest font-bold">
+                        {discountName || '할인 금액'}
+                      </div>
+                    ) : (
                       <input
                         type="text"
-                        style={{ backgroundColor: COLORS.slate50, color: COLORS.slate900 }}
-                        className="w-24 px-2 py-1 rounded text-right font-bold outline-none text-xs"
-                        placeholder="0"
-                        value={formatWithCommas(discountAmount)}
-                        onChange={(e) => setDiscountAmount(parseFormattedNumber(e.target.value))}
+                        style={{ color: COLORS.blue500 }}
+                        className="bg-transparent border-none outline-none text-[10px] font-black uppercase tracking-widest w-1/2 placeholder:text-blue-100"
+                        placeholder="할인 항목 입력 (예: 프로모션)"
+                        value={discountName}
+                        onChange={(e) => setDiscountName(e.target.value)}
                       />
-                      <select
-                        style={{ backgroundColor: COLORS.slate50, color: COLORS.slate500 }}
-                        className="border-none rounded text-[10px] font-bold outline-none p-1 cursor-pointer"
-                        value={isPercentDiscount ? 'percent' : 'amount'}
-                        onChange={(e) => setIsPercentDiscount(e.target.value === 'percent')}
-                      >
-                        <option value="amount">KRW</option>
-                        <option value="percent">%</option>
-                      </select>
+                    )}
+                    <div className="flex items-center space-x-2">
+                      {isPrinting ? (
+                        <div className="text-xs font-bold" style={{ color: COLORS.slate900 }}>
+                          {formatWithCommas(discountAmount)} {isPercentDiscount ? '%' : 'KRW'}
+                        </div>
+                      ) : (
+                        <>
+                          <input
+                            type="text"
+                            style={{ backgroundColor: COLORS.slate50, color: COLORS.slate900 }}
+                            className="w-24 px-2 py-1 rounded text-right font-bold outline-none text-xs"
+                            placeholder="0"
+                            value={formatWithCommas(discountAmount)}
+                            onChange={(e) => setDiscountAmount(parseFormattedNumber(e.target.value))}
+                          />
+                          <select
+                            style={{ backgroundColor: COLORS.slate50, color: COLORS.slate500 }}
+                            className="border-none rounded text-[10px] font-bold outline-none p-1 cursor-pointer"
+                            value={isPercentDiscount ? 'percent' : 'amount'}
+                            onChange={(e) => setIsPercentDiscount(e.target.value === 'percent')}
+                          >
+                            <option value="amount">KRW</option>
+                            <option value="percent">%</option>
+                          </select>
+                        </>
+                      )}
                     </div>
                   </div>
                   {calculatedDiscount > 0 && (
