@@ -479,15 +479,13 @@ export default function InvoiceEditor() {
             {/* 정산 영역 */}
             <div style={{ borderTop: `2px solid ${COLORS.slate900}` }} className="flex justify-end pt-8">
               <div className="w-full md:w-96 space-y-4">
+                {/* 1. 품목 합계 (Raw Subtotal) */}
                 <div className="flex justify-between items-center text-sm">
-                  <span style={{ color: COLORS.slate400 }} className="font-bold uppercase tracking-widest text-[10px]">Total Subtotal</span>
+                  <span style={{ color: COLORS.slate400 }} className="font-bold uppercase tracking-widest text-[10px]">Items Total (품목 합계)</span>
                   <span style={{ color: COLORS.slate600 }} className="font-bold font-mono tracking-tighter">{subtotal.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span style={{ color: COLORS.slate400 }} className="font-bold uppercase tracking-widest text-[10px]">VAT (10%)</span>
-                  <span style={{ color: COLORS.slate600 }} className="font-bold font-mono tracking-tighter">{vat.toLocaleString()}</span>
-                </div>
 
+                {/* 2. 할인 영역 */}
                 <div
                   style={{
                     borderTop: `1px dashed ${COLORS.slate100}`,
@@ -498,7 +496,7 @@ export default function InvoiceEditor() {
                   <div className="flex justify-between items-center">
                     {isPrinting ? (
                       <div style={{ color: COLORS.blue500 }} className="text-[10px] font-black uppercase tracking-widest font-bold">
-                        {discountName || '할인 금액'}
+                        {discountName || 'Discount (할인)'}
                       </div>
                     ) : (
                       <input
@@ -540,14 +538,27 @@ export default function InvoiceEditor() {
                   </div>
                   {calculatedDiscount > 0 && (
                     <div className="flex justify-between items-center text-xs text-right">
-                      <span style={{ color: COLORS.slate400 }} className="font-medium italic">Calculated Discount:</span>
+                      <span style={{ color: COLORS.slate400 }} className="font-medium italic">Calculated:</span>
                       <span style={{ color: COLORS.red500 }} className="font-bold font-mono">- {calculatedDiscount.toLocaleString()}</span>
                     </div>
                   )}
                 </div>
 
-                <div className="flex justify-between items-center pt-4">
-                  <span style={{ color: COLORS.blue600 }} className="font-black uppercase tracking-widest text-xs">Total Amount</span>
+                {/* 3. 할인 후 공급가액 (Subtotal) */}
+                <div className="flex justify-between items-center text-sm pt-2">
+                  <span style={{ color: COLORS.slate400 }} className="font-bold uppercase tracking-widest text-[10px]">Supply Value (공급가액)</span>
+                  <span style={{ color: COLORS.slate900 }} className="font-bold font-mono tracking-tighter">{discountedSubtotal.toLocaleString()}</span>
+                </div>
+
+                {/* 4. 부가세 (VAT) */}
+                <div className="flex justify-between items-center text-sm">
+                  <span style={{ color: COLORS.slate400 }} className="font-bold uppercase tracking-widest text-[10px]">VAT (부가세 10%)</span>
+                  <span style={{ color: COLORS.slate600 }} className="font-bold font-mono tracking-tighter">{vat.toLocaleString()}</span>
+                </div>
+
+                {/* 5. 최종 합계 (Total) */}
+                <div className="flex justify-between items-center pt-6" style={{ borderTop: `1px solid ${COLORS.slate900}` }}>
+                  <span style={{ color: COLORS.blue600 }} className="font-black uppercase tracking-widest text-xs">Total Amount (합계금액)</span>
                   <span style={{ color: COLORS.slate900 }} className="text-3xl font-black font-mono">₩ {total.toLocaleString()}</span>
                 </div>
               </div>
