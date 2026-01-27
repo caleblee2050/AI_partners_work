@@ -354,7 +354,12 @@ export default function InvoiceEditor() {
 
                   <div className="absolute right-0 top-1/2 -translate-y-1/2 w-24 h-24 flex items-center justify-center">
                     {stampImage ? (
-                      <img src={stampImage} alt="Stamp" className="w-full h-full object-contain opacity-90 rotate-[-10deg]" />
+                      <img
+                        src={stampImage}
+                        alt="Stamp"
+                        className="w-full h-full object-contain opacity-90 rotate-[-10deg]"
+                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                      />
                     ) : (
                       <label
                         style={{ border: `2px dashed ${COLORS.slate200}` }}
@@ -379,7 +384,7 @@ export default function InvoiceEditor() {
                     <th className="px-4 py-4 text-right w-32">단가 (KRW)</th>
                     <th className="px-4 py-4 text-center w-20">수량</th>
                     <th className="px-4 py-4 text-right w-40">합계 금액</th>
-                    <th className="px-4 py-4 w-12 no-print"></th>
+                    {!isPrinting && <th className="px-4 py-4 w-12 no-print"></th>}
                   </tr>
                 </thead>
                 <tbody style={{ borderBottom: `1px solid ${COLORS.slate100}` }}>
@@ -444,27 +449,31 @@ export default function InvoiceEditor() {
                       <td style={{ color: COLORS.slate900 }} className="px-4 py-5 text-right font-black">
                         {(item.price * item.qty).toLocaleString()}
                       </td>
-                      <td className="px-4 py-5 text-center no-print">
-                        <button
-                          onClick={() => removeItem(item.id)}
-                          style={{ color: COLORS.slate200 }}
-                          className="hover:text-red-500 transition-colors"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
+                      {!isPrinting && (
+                        <td className="px-4 py-5 text-center no-print">
+                          <button
+                            onClick={() => removeItem(item.id)}
+                            style={{ color: COLORS.slate200 }}
+                            className="hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <button
-                onClick={addRow}
-                style={{ backgroundColor: COLORS.slate50, color: COLORS.slate500 }}
-                className="no-print mt-6 flex items-center space-x-2 px-4 py-2 hover:bg-slate-100 hover:text-slate-900 text-xs rounded-lg transition-all font-bold tracking-tight border border-transparent"
-              >
-                <Plus size={14} />
-                <span>라인 아이템 추가</span>
-              </button>
+              {!isPrinting && (
+                <button
+                  onClick={addRow}
+                  style={{ backgroundColor: COLORS.slate50, color: COLORS.slate500 }}
+                  className="no-print mt-6 flex items-center space-x-2 px-4 py-2 hover:bg-slate-100 hover:text-slate-900 text-xs rounded-lg transition-all font-bold tracking-tight border border-transparent"
+                >
+                  <Plus size={14} />
+                  <span>라인 아이템 추가</span>
+                </button>
+              )}
             </div>
 
             {/* 정산 영역 */}
