@@ -120,18 +120,19 @@ export default function InvoiceEditor() {
 
     try {
       const canvas = await html2canvas(invoiceRef.current, {
-        scale: 2,
+        scale: 3,
         useCORS: true,
         logging: false,
         allowTaint: true,
+        backgroundColor: '#ffffff',
       });
 
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/png', 1.0);
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
       pdf.save(`견적서_${clientName || '알수없음'}_${docDate}.pdf`);
     } catch (error) {
       console.error('PDF Generation Error:', error);
@@ -231,21 +232,21 @@ export default function InvoiceEditor() {
         {/* 견적서 시트 */}
         <div
           ref={invoiceRef}
-          className="bg-white shadow-premium rounded-[2rem] overflow-hidden border border-slate-100"
+          className="bg-white shadow-premium rounded-[2rem] overflow-hidden border border-[#f1f5f9]"
           style={{ minHeight: '1120px' }}
         >
           {/* 견적서 상단 */}
-          <div className="bg-slate-900 text-white p-12 flex justify-between items-end relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+          <div className="bg-[#0f172a] text-white p-12 flex justify-between items-end relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl -mr-20 -mt-20" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}></div>
             <div className="relative z-10">
               <h1 className="text-5xl font-black tracking-tighter mb-2">견 적 서</h1>
-              <p className="text-slate-400 font-medium tracking-[0.2em] uppercase text-sm">Official Quotation</p>
+              <p className="text-[#94a3b8] font-medium tracking-[0.2em] uppercase text-sm">Official Quotation</p>
             </div>
             <div className="text-right flex flex-col items-end relative z-10">
               <div className="relative mb-2">
-                <span className="text-2xl font-black tracking-tight underline underline-offset-8 decoration-blue-500 uppercase">AI Partners</span>
+                <span className="text-2xl font-black tracking-tight underline underline-offset-8 uppercase" style={{ textDecorationColor: '#3b82f6' }}>AI Partners</span>
               </div>
-              <p className="text-xs text-slate-400 font-medium">Professional AI Education & Service Solutions</p>
+              <p className="text-xs text-[#94a3b8] font-medium">Professional AI Education & Service Solutions</p>
             </div>
           </div>
 
@@ -254,10 +255,10 @@ export default function InvoiceEditor() {
             <div className="grid grid-cols-2 gap-20 mb-16">
               <div className="space-y-8">
                 <div>
-                  <h2 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-4">수신 (Client Information)</h2>
+                  <h2 className="text-[10px] font-black text-[#2563eb] uppercase tracking-widest mb-4">수신 (Client Information)</h2>
                   <input
                     type="text"
-                    className="text-3xl font-black w-full border-b-2 border-slate-200 focus:border-blue-600 outline-none pb-2 transition-colors placeholder:text-slate-300 text-slate-900"
+                    className="text-3xl font-black w-full border-b-2 border-[#e2e8f0] focus:border-[#2563eb] outline-none pb-2 transition-colors placeholder:text-[#e2e8f0] text-[#0f172a]"
                     placeholder="고객사/기관명 귀중"
                     value={clientName}
                     onChange={(e) => setClientName(e.target.value)}
@@ -265,19 +266,19 @@ export default function InvoiceEditor() {
                 </div>
                 <div className="space-y-4">
                   <div className="flex items-center group">
-                    <span className="w-24 text-xs font-bold text-slate-400 uppercase tracking-tighter">Issue Date</span>
+                    <span className="w-24 text-xs font-bold text-[#94a3b8] uppercase tracking-tighter">Issue Date</span>
                     <input
                       type="date"
-                      className="flex-1 bg-slate-50 px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all font-mono"
+                      className="flex-1 bg-[#f8fafc] px-3 py-1.5 rounded-lg text-sm font-semibold text-[#334155] outline-none focus:ring-2 focus:ring-[#dbeafe] transition-all font-mono"
                       value={docDate}
                       onChange={(e) => setDocDate(e.target.value)}
                     />
                   </div>
                   <div className="flex items-center group">
-                    <span className="w-24 text-xs font-bold text-slate-400 uppercase tracking-tighter">Project Name</span>
+                    <span className="w-24 text-xs font-bold text-[#94a3b8] uppercase tracking-tighter">Project Name</span>
                     <input
                       type="text"
-                      className="flex-1 bg-slate-50 px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-300"
+                      className="flex-1 bg-[#f8fafc] px-3 py-1.5 rounded-lg text-sm font-semibold text-[#334155] outline-none focus:ring-2 focus:ring-[#dbeafe] transition-all placeholder:text-[#cbd5e1]"
                       placeholder="프로젝트 또는 교육명을 입력하세요"
                       value={projectTitle}
                       onChange={(e) => setProjectTitle(e.target.value)}
@@ -287,7 +288,7 @@ export default function InvoiceEditor() {
               </div>
 
               <div>
-                <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-100 pb-2">공급자 (Our Company)</h2>
+                <h2 className="text-[10px] font-black text-[#94a3b8] uppercase tracking-widest mb-6 border-b border-[#f1f5f9] pb-2">공급자 (Our Company)</h2>
                 <div className="grid grid-cols-1 gap-3 relative">
                   {[
                     ['사업자번호', '205-23-75240'],
@@ -297,8 +298,8 @@ export default function InvoiceEditor() {
                     ['연 락 처', '010-9911-2585 / aip@aipart.io'],
                   ].map(([label, value]) => (
                     <div key={label} className="flex text-sm">
-                      <span className="min-w-[80px] text-slate-400 font-medium">{label}</span>
-                      <span className="font-bold text-slate-900">{value}</span>
+                      <span className="min-w-[80px] text-[#94a3b8] font-medium">{label}</span>
+                      <span className="font-bold text-[#0f172a]">{value}</span>
                     </div>
                   ))}
 
@@ -307,8 +308,8 @@ export default function InvoiceEditor() {
                     {stampImage ? (
                       <img src={stampImage} alt="Stamp" className="w-full h-full object-contain opacity-90 rotate-[-10deg]" />
                     ) : (
-                      <label className="no-print cursor-pointer w-14 h-14 border-2 border-dashed border-slate-200 rounded-full flex items-center justify-center hover:bg-slate-50 transition-colors">
-                        <ImageIcon size={20} className="text-slate-300" />
+                      <label className="no-print cursor-pointer w-14 h-14 border-2 border-dashed border-[#e2e8f0] rounded-full flex items-center justify-center hover:bg-[#f8fafc] transition-colors">
+                        <ImageIcon size={20} className="text-[#cbd5e1]" />
                         <input type="file" className="hidden" onChange={handleStampUpload} accept="image/*" />
                       </label>
                     )}
@@ -321,7 +322,7 @@ export default function InvoiceEditor() {
             <div className="mb-12">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-y-2 border-slate-900 text-slate-900 text-[10px] uppercase tracking-[0.2em] font-black">
+                  <tr className="border-y-2 border-[#0f172a] text-[#0f172a] text-[10px] uppercase tracking-[0.2em] font-black">
                     <th className="px-4 py-4 w-12 text-center">No.</th>
                     <th className="px-4 py-4">항목 및 세부 세부사항</th>
                     <th className="px-4 py-4 text-right w-32">단가 (KRW)</th>
@@ -388,23 +389,23 @@ export default function InvoiceEditor() {
             </div>
 
             {/* 정산 영역 */}
-            <div className="flex justify-end pt-8 border-t-2 border-slate-900">
+            <div className="flex justify-end pt-8 border-t-2 border-[#0f172a]">
               <div className="w-full md:w-96 space-y-4">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Total Subtotal</span>
-                  <span className="font-bold text-slate-600 font-mono tracking-tighter">{subtotal.toLocaleString()}</span>
+                  <span className="text-[#94a3b8] font-bold uppercase tracking-widest text-[10px]">Total Subtotal</span>
+                  <span className="font-bold text-[#475569] font-mono tracking-tighter">{subtotal.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">VAT (10%)</span>
-                  <span className="font-bold text-slate-600 font-mono tracking-tighter">{vat.toLocaleString()}</span>
+                  <span className="text-[#94a3b8] font-bold uppercase tracking-widest text-[10px]">VAT (10%)</span>
+                  <span className="font-bold text-[#475569] font-mono tracking-tighter">{vat.toLocaleString()}</span>
                 </div>
 
                 {/* 할인 입력 필드 */}
-                <div className="flex flex-col space-y-2 py-3 border-y border-dashed border-slate-100">
+                <div className="flex flex-col space-y-2 py-3 border-y border-dashed border-[#f1f5f9]">
                   <div className="flex justify-between items-center">
                     <input
                       type="text"
-                      className="bg-transparent border-none outline-none text-[10px] font-black text-blue-500 uppercase tracking-widest w-1/2 placeholder:text-blue-200"
+                      className="bg-transparent border-none outline-none text-[10px] font-black text-[#2563eb] uppercase tracking-widest w-1/2 placeholder:text-[#dbeafe]"
                       placeholder="할인 항목 입력 (예: 프로모션)"
                       value={discountName}
                       onChange={(e) => setDiscountName(e.target.value)}
@@ -412,13 +413,13 @@ export default function InvoiceEditor() {
                     <div className="flex items-center space-x-2">
                       <input
                         type="text"
-                        className="w-24 bg-slate-50 px-2 py-1 rounded text-right font-bold text-slate-900 outline-none text-xs"
+                        className="w-24 bg-[#f8fafc] px-2 py-1 rounded text-right font-bold text-[#0f172a] outline-none text-xs"
                         placeholder="0"
                         value={formatWithCommas(discountAmount)}
                         onChange={(e) => setDiscountAmount(parseFormattedNumber(e.target.value))}
                       />
                       <select
-                        className="bg-slate-50 border-none rounded text-[10px] font-bold text-slate-500 outline-none p-1 cursor-pointer"
+                        className="bg-[#f8fafc] border-none rounded text-[10px] font-bold text-[#64748b] outline-none p-1 cursor-pointer"
                         value={isPercentDiscount ? 'percent' : 'amount'}
                         onChange={(e) => setIsPercentDiscount(e.target.value === 'percent')}
                       >
@@ -429,15 +430,15 @@ export default function InvoiceEditor() {
                   </div>
                   {calculatedDiscount > 0 && (
                     <div className="flex justify-between items-center text-xs text-right">
-                      <span className="text-slate-400 font-medium italic">Calculated Discount:</span>
-                      <span className="text-red-500 font-bold font-mono">- {calculatedDiscount.toLocaleString()}</span>
+                      <span className="text-[#94a3b8] font-medium italic">Calculated Discount:</span>
+                      <span className="text-[#ef4444] font-bold font-mono">- {calculatedDiscount.toLocaleString()}</span>
                     </div>
                   )}
                 </div>
 
                 <div className="flex justify-between items-center pt-4">
-                  <span className="text-blue-600 font-black uppercase tracking-widest text-xs">Total Amount</span>
-                  <span className="text-3xl font-black text-slate-900 font-mono">₩ {total.toLocaleString()}</span>
+                  <span className="text-[#2563eb] font-black uppercase tracking-widest text-xs">Total Amount</span>
+                  <span className="text-3xl font-black text-[#0f172a] font-mono">₩ {total.toLocaleString()}</span>
                 </div>
               </div>
             </div>
