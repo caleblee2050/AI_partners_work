@@ -1,6 +1,7 @@
-import { db } from './db';
+import { getDb } from './db';
 
 async function init() {
+    const db = getDb();
     await db.execute(`
     CREATE TABLE IF NOT EXISTS invoices (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
