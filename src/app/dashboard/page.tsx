@@ -123,18 +123,17 @@ export default function DashboardPage() {
                                         ₩ {inv.total.toLocaleString()}
                                     </td>
                                     <td className="px-6 py-5">
-                                        <div className="flex items-center justify-center space-x-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            {/* TODO: 상세 보기 기능 연결 */}
+                                        <div className="flex items-center justify-center space-x-2">
                                             <Link
                                                 href={`/editor?id=${inv.id}`}
-                                                className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                                                className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                                                 title="자세히 보기"
                                             >
                                                 <ExternalLink size={18} />
                                             </Link>
                                             <button
                                                 onClick={() => handleDelete(inv.id)}
-                                                className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                                                className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                                                 title="삭제"
                                             >
                                                 <Trash2 size={18} />
