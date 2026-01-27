@@ -354,11 +354,18 @@ export default function InvoiceEditor() {
 
                   <div className="absolute right-0 top-1/2 -translate-y-1/2 w-24 h-24 flex items-center justify-center">
                     {stampImage ? (
-                      <img
-                        src={stampImage}
-                        alt="Stamp"
-                        className="w-full h-full object-contain opacity-90 rotate-[-10deg]"
-                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                      <div
+                        style={{
+                          width: '80px',
+                          height: '80px',
+                          backgroundImage: `url(${stampImage})`,
+                          backgroundSize: 'contain',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'center',
+                          opacity: 0.9,
+                          transform: 'rotate(-10deg)',
+                        }}
+                        aria-label="Stamp"
                       />
                     ) : (
                       <label
