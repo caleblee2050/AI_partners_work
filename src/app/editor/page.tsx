@@ -98,13 +98,19 @@ export default function InvoiceEditor() {
   };
 
   const subtotal = items.reduce((acc, item) => acc + item.price * item.qty, 0);
-  const vat = Math.floor(subtotal * 0.1);
 
+  // 할인액 계산 (부가세 포함 전 공급가액 기준)
   const calculatedDiscount = isPercentDiscount
     ? Math.floor(subtotal * (discountAmount / 100))
     : discountAmount;
 
-  const total = subtotal + vat - calculatedDiscount;
+  // 할인이 적용된 실제 공급가액
+  const discountedSubtotal = subtotal - calculatedDiscount;
+
+  // 부가세 계산 (할인이 적용된 금액의 10%)
+  const vat = Math.floor(discountedSubtotal * 0.1);
+
+  const total = discountedSubtotal + vat;
 
   const downloadPDF = async () => {
     if (!invoiceRef.current) {
