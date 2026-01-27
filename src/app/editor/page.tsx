@@ -21,24 +21,60 @@ export default function InvoiceEditor() {
   const [projectTitle, setProjectTitle] = useState('');
   const [stampImage, setStampImage] = useState<string | null>(null);
 
-  // 할인 관련 상태 추가
+  // 할인 관련 상태
   const [discountName, setDiscountName] = useState('');
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [isPercentDiscount, setIsPercentDiscount] = useState(false);
 
+  const [isLoaded, setIsLoaded] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
 
+  // 로컬 스토리지에서 데이터 로드
   useEffect(() => {
-    // 초기 행 5개 추가
-    const initialItems = Array.from({ length: 5 }, (_, i) => ({
-      id: i + 1,
-      name: '',
-      details: '',
-      price: 0,
-      qty: 0,
-    }));
-    setItems(initialItems);
+    const savedData = localStorage.getItem('invoice_draft');
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        setItems(parsed.items || []);
+        setDocDate(parsed.docDate || new Date().toISOString().split('T')[0]);
+        setClientName(parsed.clientName || '');
+        setProjectTitle(parsed.projectTitle || '');
+        setStampImage(parsed.stampImage || null);
+        setDiscountName(parsed.discountName || '');
+        setDiscountAmount(parsed.discountAmount || 0);
+        setIsPercentDiscount(parsed.isPercentDiscount || false);
+      } catch (e) {
+        console.error('Failed to load draft:', e);
+      }
+    } else {
+      // 초기 행 5개 추가
+      const initialItems = Array.from({ length: 5 }, (_, i) => ({
+        id: i + 1,
+        name: '',
+        details: '',
+        price: 0,
+        qty: 0,
+      }));
+      setItems(initialItems);
+    }
+    setIsLoaded(true);
   }, []);
+
+  // 데이터 변경 시 로컬 스토리지에 저장
+  useEffect(() => {
+    if (!isLoaded) return;
+    const dataToSave = {
+      items,
+      docDate,
+      clientName,
+      projectTitle,
+      stampImage,
+      discountName,
+      discountAmount,
+      isPercentDiscount
+    };
+    localStorage.setItem('invoice_draft', JSON.stringify(dataToSave));
+  }, [items, docDate, clientName, projectTitle, stampImage, discountName, discountAmount, isPercentDiscount, isLoaded]);
 
   const addRow = () => {
     setItems((prev) => [
@@ -64,7 +100,6 @@ export default function InvoiceEditor() {
   const subtotal = items.reduce((acc, item) => acc + item.price * item.qty, 0);
   const vat = Math.floor(subtotal * 0.1);
 
-  // 할인액 계산
   const calculatedDiscount = isPercentDiscount
     ? Math.floor(subtotal * (discountAmount / 100))
     : discountAmount;
@@ -72,22 +107,30 @@ export default function InvoiceEditor() {
   const total = subtotal + vat - calculatedDiscount;
 
   const downloadPDF = async () => {
-    if (!invoiceRef.current) return;
+    if (!invoiceRef.current) {
+      alert('출력할 내용이 없습니다.');
+      return;
+    }
 
-    const canvas = await html2canvas(invoiceRef.current, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-    });
+    try {
+      const canvas = await html2canvas(invoiceRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        allowTaint: true,
+      });
 
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const imgProps = pdf.getImageProperties(imgData);
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`견적서_${clientName || '알수없음'}_${docDate}.pdf`);
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`견적서_${clientName || '알수없음'}_${docDate}.pdf`);
+    } catch (error) {
+      console.error('PDF Generation Error:', error);
+      alert('PDF 생성 중 오류가 발생했습니다. 브라우저 콘솔을 확인해 주세요.');
+    }
   };
 
   const handleStampUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -126,11 +169,11 @@ export default function InvoiceEditor() {
       if (result.success) {
         alert('견적서가 성공적으로 저장되었습니다!');
       } else {
-        alert('저장 실패: ' + result.error);
+        alert('저장 실패: ' + (result.error || '알 수 없는 오류'));
       }
     } catch (error) {
       console.error('Save error:', error);
-      alert('저장 중 오류가 발생했습니다.');
+      alert('저장 중 오류가 발생했습니다. DB 연결 상태를 확인해 주세요.');
     }
   };
 
@@ -142,6 +185,8 @@ export default function InvoiceEditor() {
   const parseFormattedNumber = (value: string) => {
     return parseInt(value.replace(/,/g, '')) || 0;
   };
+
+  if (!isLoaded) return <div className="min-h-screen bg-slate-50 flex items-center justify-center font-bold text-slate-400">데이터를 불러오는 중...</div>;
 
   return (
     <main className="bg-slate-50 min-h-screen py-10 px-4 font-sans">
@@ -206,7 +251,7 @@ export default function InvoiceEditor() {
                   <h2 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-4">수신 (Client Information)</h2>
                   <input
                     type="text"
-                    className="text-3xl font-black w-full border-b-2 border-slate-100 focus:border-blue-500 outline-none pb-2 transition-colors placeholder:text-slate-200 text-slate-900"
+                    className="text-3xl font-black w-full border-b-2 border-slate-200 focus:border-blue-600 outline-none pb-2 transition-colors placeholder:text-slate-300 text-slate-900"
                     placeholder="고객사/기관명 귀중"
                     value={clientName}
                     onChange={(e) => setClientName(e.target.value)}
@@ -302,7 +347,7 @@ export default function InvoiceEditor() {
                       <td className="px-4 py-5">
                         <input
                           type="text"
-                          className="w-full bg-transparent text-right font-semibold text-slate-600 outline-none"
+                          className="w-full bg-transparent text-right font-semibold text-slate-700 outline-none"
                           value={formatWithCommas(item.price)}
                           onChange={(e) => updateItem(item.id, 'price', parseFormattedNumber(e.target.value))}
                         />
@@ -318,11 +363,8 @@ export default function InvoiceEditor() {
                       <td className="px-4 py-5 text-right font-black text-slate-900">
                         {(item.price * item.qty).toLocaleString()}
                       </td>
-                      <td className="px-4 py-5 text-center no-print">
-                        <button
-                          onClick={() => removeItem(item.id)}
-                          className="text-slate-200 hover:text-red-500 transition-colors"
-                        >
+                      <td className="px-4 py-5 text-center no-print text-slate-200 hover:text-red-500 transition-colors">
+                        <button onClick={() => removeItem(item.id)}>
                           <Trash2 size={16} />
                         </button>
                       </td>
