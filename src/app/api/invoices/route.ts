@@ -3,16 +3,31 @@ import { getDb } from '@/lib/db';
 
 export const dynamic = "force-dynamic";
 
+async function ensureInvoiceColumns() {
+    const db = getDb();
+    const tableInfo = await db.execute('PRAGMA table_info(invoices)');
+    const columns = new Set(tableInfo.rows.map((row) => String(row.name)));
+
+    if (!columns.has('include_vat')) {
+        await db.execute('ALTER TABLE invoices ADD COLUMN include_vat INTEGER DEFAULT 1');
+    }
+
+    if (!columns.has('updated_at')) {
+        await db.execute('ALTER TABLE invoices ADD COLUMN updated_at DATETIME');
+    }
+}
+
 export async function POST(req: Request) {
     try {
         const data = await req.json();
-        const { clientName, docDate, projectTitle, items, subtotal, vat, total, discountName, discountAmount, isPercentDiscount } = data;
+        const { clientName, docDate, projectTitle, items, subtotal, vat, total, discountName, discountAmount, isPercentDiscount, includeVat } = data;
 
         const db = getDb();
+        await ensureInvoiceColumns();
         const result = await db.execute({
-            sql: `INSERT INTO invoices (client_name, doc_date, project_title, items, subtotal, vat, discount_name, discount_amount, is_percent_discount, total) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            args: [clientName, docDate, projectTitle, JSON.stringify(items), subtotal, vat, discountName || '', discountAmount || 0, isPercentDiscount ? 1 : 0, total],
+            sql: `INSERT INTO invoices (client_name, doc_date, project_title, items, subtotal, vat, discount_name, discount_amount, is_percent_discount, include_vat, total) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            args: [clientName, docDate, projectTitle, JSON.stringify(items), subtotal, vat, discountName || '', discountAmount || 0, isPercentDiscount ? 1 : 0, includeVat ? 1 : 0, total],
         });
 
         return NextResponse.json({ success: true, id: Number(result.lastInsertRowid) });
@@ -27,6 +42,7 @@ export async function GET(req: Request) {
         const { searchParams } = new URL(req.url);
         const id = searchParams.get('id');
         const db = getDb();
+        await ensureInvoiceColumns();
 
         if (id) {
             const result = await db.execute({
@@ -50,23 +66,24 @@ export async function GET(req: Request) {
 export async function PUT(req: Request) {
     try {
         const data = await req.json();
-        const { id, clientName, docDate, projectTitle, items, subtotal, vat, total, discountName, discountAmount, isPercentDiscount } = data;
+        const { id, clientName, docDate, projectTitle, items, subtotal, vat, total, discountName, discountAmount, isPercentDiscount, includeVat } = data;
 
         if (!id) {
             return NextResponse.json({ success: false, error: 'ID is required for update' }, { status: 400 });
         }
 
         const db = getDb();
+        await ensureInvoiceColumns();
         await db.execute({
             sql: `UPDATE invoices SET 
                 client_name = ?, doc_date = ?, project_title = ?, items = ?, 
                 subtotal = ?, vat = ?, discount_name = ?, discount_amount = ?, 
-                is_percent_discount = ?, total = ?, updated_at = CURRENT_TIMESTAMP
+                is_percent_discount = ?, include_vat = ?, total = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?`,
             args: [
                 clientName, docDate, projectTitle, JSON.stringify(items),
                 subtotal, vat, discountName || '', discountAmount || 0,
-                isPercentDiscount ? 1 : 0, total, id
+                isPercentDiscount ? 1 : 0, includeVat ? 1 : 0, total, id
             ],
         });
 

@@ -53,6 +53,7 @@ function InvoiceEditorContent() {
   const [discountName, setDiscountName] = useState('');
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [isPercentDiscount, setIsPercentDiscount] = useState(false);
+  const [includeVat, setIncludeVat] = useState(true);
 
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -88,6 +89,7 @@ function InvoiceEditorContent() {
           setDiscountName(inv.discount_name || '');
           setDiscountAmount(inv.discount_amount || 0);
           setIsPercentDiscount(!!inv.is_percent_discount);
+          setIncludeVat(inv.include_vat === undefined || inv.include_vat === null ? true : Number(inv.include_vat) !== 0);
           // 도장 이미지는 별도로 저장되지 않으므로 draft나 기본값 유지 (필요시 DB 확장)
         }
       } catch (error) {
@@ -113,6 +115,7 @@ function InvoiceEditorContent() {
           setDiscountName(parsed.discountName || '');
           setDiscountAmount(parsed.discountAmount || 0);
           setIsPercentDiscount(parsed.isPercentDiscount || false);
+          setIncludeVat(parsed.includeVat ?? true);
         } catch (e) {
           console.error('Failed to load draft:', e);
         }
@@ -140,10 +143,11 @@ function InvoiceEditorContent() {
       stampImage,
       discountName,
       discountAmount,
-      isPercentDiscount
+      isPercentDiscount,
+      includeVat
     };
     localStorage.setItem('invoice_draft', JSON.stringify(dataToSave));
-  }, [items, docDate, clientName, projectTitle, stampImage, discountName, discountAmount, isPercentDiscount, isLoaded]);
+  }, [items, docDate, clientName, projectTitle, stampImage, discountName, discountAmount, isPercentDiscount, includeVat, isLoaded]);
 
   const addRow = () => {
     setItems((prev) => [
@@ -173,7 +177,7 @@ function InvoiceEditorContent() {
     : discountAmount;
 
   const discountedSubtotal = subtotal - calculatedDiscount;
-  const vat = Math.floor(discountedSubtotal * 0.1);
+  const vat = includeVat ? Math.floor(discountedSubtotal * 0.1) : 0;
   const total = discountedSubtotal + vat;
 
   const downloadPDF = async () => {
@@ -226,7 +230,7 @@ function InvoiceEditorContent() {
       const dbData = {
         id: invoiceId,
         clientName, docDate, projectTitle, items, subtotal, vat,
-        discountName, discountAmount, isPercentDiscount, total,
+        discountName, discountAmount, isPercentDiscount, includeVat, total,
       };
 
       const response = await fetch('/api/invoices', {
@@ -273,56 +277,57 @@ function InvoiceEditorContent() {
             <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
             <span className="font-semibold">대시보드로 돌아가기</span>
           </Link>
-          <div className="flex space-x-3 w-full md:w-auto">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full md:flex md:w-auto">
             <button
               onClick={() => window.print()}
-              className="flex-1 md:flex-none flex items-center justify-center space-x-2 px-5 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all font-bold shadow-sm"
+              className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-lg sm:rounded-xl hover:bg-slate-50 transition-all font-bold shadow-sm text-xs sm:text-sm whitespace-nowrap"
             >
-              <Printer size={18} />
+              <Printer size={16} />
               <span>인쇄</span>
             </button>
             <button
               onClick={downloadPDF}
-              className="flex-1 md:flex-none flex items-center justify-center space-x-2 px-5 py-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all font-bold"
+              className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 bg-blue-50 text-blue-600 rounded-lg sm:rounded-xl hover:bg-blue-100 transition-all font-bold text-xs sm:text-sm whitespace-nowrap"
             >
-              <Download size={18} />
+              <Download size={16} />
               <span>PDF 내보내기</span>
             </button>
             <button
               onClick={saveToDB}
-              className="flex-1 md:flex-none flex items-center justify-center space-x-2 px-8 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all font-bold shadow-md hover:shadow-lg"
+              className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-8 py-2.5 bg-slate-900 text-white rounded-lg sm:rounded-xl hover:bg-slate-800 transition-all font-bold shadow-md hover:shadow-lg text-xs sm:text-sm whitespace-nowrap"
             >
-              <Save size={18} />
+              <Save size={16} />
               <span>DB 저장</span>
             </button>
           </div>
         </div>
 
         {/* 견적서 시트 - 캡처 영역 */}
-        <div
-          ref={invoiceRef}
-          className="bg-white"
-          style={{
-            minHeight: '1120px',
-            backgroundColor: COLORS.white,
-            border: isPrinting ? 'none' : `1px solid ${COLORS.slate100}`,
-            boxShadow: isPrinting ? 'none' : '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-            borderRadius: isPrinting ? '0' : '2rem',
-            overflow: 'hidden'
-          }}
-        >
+        <div className="overflow-x-auto pb-4">
+          <div
+            ref={invoiceRef}
+            className="bg-white w-full min-w-[820px]"
+            style={{
+              minHeight: '1120px',
+              backgroundColor: COLORS.white,
+              border: isPrinting ? 'none' : `1px solid ${COLORS.slate100}`,
+              boxShadow: isPrinting ? 'none' : '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              borderRadius: isPrinting ? '0' : '2rem',
+              overflow: 'hidden'
+            }}
+          >
           {/* 견적서 상단 */}
           <div style={{ backgroundColor: COLORS.slate900, color: COLORS.white }} className="p-12 flex justify-between items-end relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl -mr-20 -mt-20" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}></div>
             <div className="relative z-10">
               <h1 className="text-5xl font-black tracking-tighter mb-2">견 적 서</h1>
-              <p style={{ color: COLORS.slate400 }} className="font-medium tracking-[0.2em] uppercase text-sm">Official Quotation</p>
+              <p style={{ color: COLORS.slate300 }} className="font-medium tracking-[0.2em] uppercase text-sm">Official Quotation</p>
             </div>
             <div className="text-right flex flex-col items-end relative z-10">
               <div className="relative mb-2">
                 <span className="text-2xl font-black tracking-tight underline underline-offset-8 uppercase" style={{ textDecorationColor: COLORS.blue500 }}>AI Partners</span>
               </div>
-              <p style={{ color: COLORS.slate400 }} className="text-xs font-medium">Professional AI Education & Service Solutions</p>
+              <p style={{ color: COLORS.slate300 }} className="text-xs font-medium">Professional AI Education & Service Solutions</p>
             </div>
           </div>
 
@@ -339,7 +344,7 @@ function InvoiceEditorContent() {
                   ) : (
                     <input
                       type="text"
-                      className="text-3xl font-black w-full outline-none pb-2 transition-colors placeholder:text-slate-200"
+                      className="text-3xl font-black w-full outline-none pb-2 transition-colors placeholder:text-slate-400"
                       style={{ borderBottom: `2px solid ${COLORS.slate100}`, color: COLORS.slate900 }}
                       placeholder="고객사/기관명 귀중"
                       value={clientName}
@@ -349,28 +354,28 @@ function InvoiceEditorContent() {
                 </div>
                 <div className="space-y-4">
                   <div className="flex items-center group">
-                    <span style={{ color: COLORS.slate400 }} className="w-24 text-xs font-bold uppercase tracking-tighter">Issue Date</span>
+                    <span style={{ color: COLORS.slate500 }} className="w-24 text-xs font-bold uppercase tracking-tighter">Issue Date</span>
                     {isPrinting ? (
                       <div className="text-sm font-semibold font-mono" style={{ color: COLORS.slate700 }}>{docDate}</div>
                     ) : (
                       <input
                         type="date"
                         className="flex-1 px-3 py-1.5 rounded-lg text-sm font-semibold outline-none transition-all font-mono"
-                        style={{ backgroundColor: COLORS.slate50, color: COLORS.slate700 }}
+                        style={{ backgroundColor: COLORS.slate100, color: COLORS.slate700 }}
                         value={docDate}
                         onChange={(e) => setDocDate(e.target.value)}
                       />
                     )}
                   </div>
                   <div className="flex items-center group">
-                    <span style={{ color: COLORS.slate400 }} className="w-24 text-xs font-bold uppercase tracking-tighter">Project Name</span>
+                    <span style={{ color: COLORS.slate500 }} className="w-24 text-xs font-bold uppercase tracking-tighter">Project Name</span>
                     {isPrinting ? (
                       <div className="text-sm font-semibold" style={{ color: COLORS.slate700 }}>{projectTitle || '-'}</div>
                     ) : (
                       <input
                         type="text"
-                        className="flex-1 px-3 py-1.5 rounded-lg text-sm font-semibold outline-none transition-all placeholder:text-slate-300"
-                        style={{ backgroundColor: COLORS.slate50, color: COLORS.slate700 }}
+                        className="flex-1 px-3 py-1.5 rounded-lg text-sm font-semibold outline-none transition-all placeholder:text-slate-500"
+                        style={{ backgroundColor: COLORS.slate100, color: COLORS.slate700 }}
                         placeholder="프로젝트 또는 교육명을 입력하세요"
                         value={projectTitle}
                         onChange={(e) => setProjectTitle(e.target.value)}
@@ -381,7 +386,7 @@ function InvoiceEditorContent() {
               </div>
 
               <div>
-                <h2 style={{ color: COLORS.slate400, borderBottom: `1px solid ${COLORS.slate100}` }} className="text-[10px] font-black uppercase tracking-widest mb-6 pb-2">공급자 (Our Company)</h2>
+                <h2 style={{ color: COLORS.slate500, borderBottom: `1px solid ${COLORS.slate200}` }} className="text-[10px] font-black uppercase tracking-widest mb-6 pb-2">공급자 (Our Company)</h2>
                 <div className="grid grid-cols-1 gap-3 relative">
                   {[
                     ['사업자번호', '205-23-75240'],
@@ -391,7 +396,7 @@ function InvoiceEditorContent() {
                     ['연 락 처', '010-9911-2585 / aip@aipart.io'],
                   ].map(([label, value]) => (
                     <div key={label} className="flex text-sm">
-                      <span style={{ color: COLORS.slate400 }} className="min-w-[80px] font-medium">{label}</span>
+                      <span style={{ color: COLORS.slate500 }} className="min-w-[80px] font-medium">{label}</span>
                       <span style={{ color: COLORS.slate900 }} className="font-bold">{value}</span>
                     </div>
                   ))}
@@ -446,22 +451,22 @@ function InvoiceEditorContent() {
                         {isPrinting ? (
                           <>
                             <div style={{ color: COLORS.slate900 }} className="font-bold">{item.name}</div>
-                            {item.details && <div style={{ color: COLORS.slate400 }} className="text-xs">{item.details}</div>}
+                            {item.details && <div style={{ color: COLORS.slate500 }} className="text-xs">{item.details}</div>}
                           </>
                         ) : (
                           <>
                             <input
                               type="text"
                               style={{ color: COLORS.slate900 }}
-                              className="w-full bg-transparent font-bold outline-none placeholder:text-slate-200"
+                              className="w-full bg-transparent font-bold outline-none placeholder:text-slate-400"
                               placeholder="품목명을 입력하세요"
                               value={item.name}
                               onChange={(e) => updateItem(item.id, 'name', e.target.value)}
                             />
                             <input
                               type="text"
-                              style={{ color: COLORS.slate400 }}
-                              className="w-full bg-transparent text-xs outline-none placeholder:text-slate-200"
+                              style={{ color: COLORS.slate500 }}
+                              className="w-full bg-transparent text-xs outline-none placeholder:text-slate-400"
                               placeholder="세부 기술 사양 또는 관련 정보를 입력하세요"
                               value={item.details}
                               onChange={(e) => updateItem(item.id, 'details', e.target.value)}
@@ -504,7 +509,7 @@ function InvoiceEditorContent() {
                         <td className="px-4 py-5 text-center no-print">
                           <button
                             onClick={() => removeItem(item.id)}
-                            style={{ color: COLORS.slate200 }}
+                            style={{ color: COLORS.slate300 }}
                             className="hover:text-red-500 transition-colors"
                           >
                             <Trash2 size={16} />
@@ -532,8 +537,8 @@ function InvoiceEditorContent() {
               <div className="w-full md:w-96 space-y-4">
                 {/* 1. 품목 합계 (Raw Subtotal) */}
                 <div className="flex justify-between items-center text-sm">
-                  <span style={{ color: COLORS.slate400 }} className="font-bold uppercase tracking-widest text-[10px]">Items Total (품목 합계)</span>
-                  <span style={{ color: COLORS.slate600 }} className="font-bold font-mono tracking-tighter">{subtotal.toLocaleString()}</span>
+                  <span style={{ color: COLORS.slate500 }} className="font-bold uppercase tracking-widest text-[10px]">Items Total (품목 합계)</span>
+                  <span style={{ color: COLORS.slate700 }} className="font-bold font-mono tracking-tighter">{subtotal.toLocaleString()}</span>
                 </div>
 
                 {/* 2. 할인 영역 */}
@@ -553,7 +558,7 @@ function InvoiceEditorContent() {
                       <input
                         type="text"
                         style={{ color: COLORS.blue500 }}
-                        className="bg-transparent border-none outline-none text-[10px] font-black uppercase tracking-widest w-1/2 placeholder:text-blue-100"
+                        className="bg-transparent border-none outline-none text-[10px] font-black uppercase tracking-widest w-1/2 placeholder:text-blue-300"
                         placeholder="할인 항목 입력 (예: 프로모션)"
                         value={discountName}
                         onChange={(e) => setDiscountName(e.target.value)}
@@ -568,14 +573,14 @@ function InvoiceEditorContent() {
                         <>
                           <input
                             type="text"
-                            style={{ backgroundColor: COLORS.slate50, color: COLORS.slate900 }}
+                            style={{ backgroundColor: COLORS.slate100, color: COLORS.slate900 }}
                             className="w-24 px-2 py-1 rounded text-right font-bold outline-none text-xs"
                             placeholder="0"
                             value={formatWithCommas(discountAmount)}
                             onChange={(e) => setDiscountAmount(parseFormattedNumber(e.target.value))}
                           />
                           <select
-                            style={{ backgroundColor: COLORS.slate50, color: COLORS.slate500 }}
+                            style={{ backgroundColor: COLORS.slate100, color: COLORS.slate600 }}
                             className="border-none rounded text-[10px] font-bold outline-none p-1 cursor-pointer"
                             value={isPercentDiscount ? 'percent' : 'amount'}
                             onChange={(e) => setIsPercentDiscount(e.target.value === 'percent')}
@@ -589,7 +594,7 @@ function InvoiceEditorContent() {
                   </div>
                   {calculatedDiscount > 0 && (
                     <div className="flex justify-between items-center text-xs text-right">
-                      <span style={{ color: COLORS.slate400 }} className="font-medium italic">Calculated:</span>
+                      <span style={{ color: COLORS.slate500 }} className="font-medium italic">Calculated:</span>
                       <span style={{ color: COLORS.red500 }} className="font-bold font-mono">- {calculatedDiscount.toLocaleString()}</span>
                     </div>
                   )}
@@ -597,15 +602,34 @@ function InvoiceEditorContent() {
 
                 {/* 3. 할인 후 공급가액 (Subtotal) */}
                 <div className="flex justify-between items-center text-sm pt-2">
-                  <span style={{ color: COLORS.slate400 }} className="font-bold uppercase tracking-widest text-[10px]">Supply Value (공급가액)</span>
+                  <span style={{ color: COLORS.slate500 }} className="font-bold uppercase tracking-widest text-[10px]">Supply Value (공급가액)</span>
                   <span style={{ color: COLORS.slate900 }} className="font-bold font-mono tracking-tighter">{discountedSubtotal.toLocaleString()}</span>
                 </div>
 
                 {/* 4. 부가세 (VAT) */}
-                <div className="flex justify-between items-center text-sm">
-                  <span style={{ color: COLORS.slate400 }} className="font-bold uppercase tracking-widest text-[10px]">VAT (부가세 10%)</span>
-                  <span style={{ color: COLORS.slate600 }} className="font-bold font-mono tracking-tighter">{vat.toLocaleString()}</span>
-                </div>
+                {(includeVat || !isPrinting) && (
+                  <div
+                    className={`flex justify-between items-center gap-4 text-sm ${!includeVat ? 'no-print rounded-lg px-3 py-2' : ''}`}
+                    style={!includeVat ? { backgroundColor: COLORS.slate50, border: `1px dashed ${COLORS.slate200}` } : undefined}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span style={{ color: includeVat ? COLORS.slate500 : COLORS.slate600 }} className="font-bold uppercase tracking-widest text-[10px]">VAT (부가세 10%)</span>
+                      {!isPrinting && (
+                        <button
+                          type="button"
+                          onClick={() => setIncludeVat((prev) => !prev)}
+                          className="no-print rounded-md border px-2 py-1 text-[10px] font-black transition-all hover:bg-slate-900 hover:text-white"
+                          style={{ borderColor: COLORS.slate200, color: COLORS.slate700 }}
+                        >
+                          {includeVat ? '부가세 삭제' : '부가세 추가'}
+                        </button>
+                      )}
+                    </div>
+                    <span style={{ color: includeVat ? COLORS.slate700 : COLORS.slate500 }} className="font-bold font-mono tracking-tighter">
+                      {includeVat ? vat.toLocaleString() : '미적용'}
+                    </span>
+                  </div>
+                )}
 
                 {/* 5. 최종 합계 (Total) */}
                 <div className="flex justify-between items-center pt-6" style={{ borderTop: `1px solid ${COLORS.slate900}` }}>
@@ -619,6 +643,7 @@ function InvoiceEditorContent() {
             <div className="mt-32 text-center space-y-6">
               <p style={{ color: COLORS.slate900 }} className="font-bold text-lg">위와 같이 견적 내용을 제출합니다.</p>
             </div>
+          </div>
           </div>
         </div>
       </div>
